@@ -1,8 +1,11 @@
 # ===========================================
-# STAGE 1: Base PHP + Node
+# STAGE 1: PHP + Node Base
 # ===========================================
 FROM dunglas/frankenphp:1.1-php8.3 AS base
 WORKDIR /app
+
+# Default arg, bisa di-override saat build
+ARG PHP_EXTENSIONS="gd zip intl pdo_mysql imagick"
 
 RUN apt-get update && apt-get install -y \
     curl unzip zip libpq-dev libicu-dev libzip-dev libmagickwand-dev \
@@ -12,8 +15,8 @@ RUN apt-get update && apt-get install -y \
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# PHP extensions
-RUN install-php-extensions gd zip intl pdo_mysql imagick
+# Install PHP extensions (default / custom via build-arg)
+RUN install-php-extensions $PHP_EXTENSIONS
 
 # Node + PM2
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
@@ -26,7 +29,6 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 FROM base AS production
 WORKDIR /app
 
-# Runtime ENV defaults (override di Dokploy/compose)
 ENV APP_ENV=production \
     APP_PORT=80 \
     PHP_WORKERS=4 \
@@ -38,17 +40,15 @@ ENV APP_ENV=production \
     ENABLE_SCHEDULER=false \
     PM2_LOG_DIR=/app/pm2-logs
 
-# Non-root user
 RUN groupadd -r app && useradd -r -g app -s /bin/bash app
 RUN mkdir -p $PM2_LOG_DIR && chown -R app:app $PM2_LOG_DIR
 
-# Copy config (dari repo ini)
+# Copy config dari repo ini
 COPY docker/Caddyfile /etc/caddy/Caddyfile
 COPY docker/start-container.sh /start-container.sh
 COPY docker/ecosystem.config.cjs /etc/app-config/ecosystem.config.cjs
 RUN chmod +x /start-container.sh
 
-# Folder untuk caddy
 RUN mkdir -p /config/caddy /data/caddy \
     && chown -R app:app /config /data
 
