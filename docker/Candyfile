@@ -1,0 +1,32 @@
+{
+    admin off
+    auto_https off
+    log {
+        output stdout
+        format console
+    }
+    frankenphp {
+        workers {$PHP_WORKERS:4}
+    }
+}
+
+:{$APP_PORT:80} {
+    root * /app/public
+
+    route {
+        @healthcheck path /health
+        respond @healthcheck "OK" 200
+
+        @static {
+            path_regexp static ^/.*\.(?:css|js|mjs|json|jpg|jpeg|gif|png|svg|ico|woff2?|ttf|eot|map)$
+        }
+        header @static Cache-Control "public, max-age=31536000, immutable"
+        file_server @static
+
+        @php path_regexp php ^/.*\.php$
+        php_server @php
+
+        try_files {path} /index.php
+        php_server
+    }
+}
