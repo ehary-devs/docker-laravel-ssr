@@ -2,7 +2,7 @@ name: Publish Docker image
 
 on:
   push:
-    branches: [ "master" ] # atau branch lain sesuai kebutuhan
+    branches: [ "master" ]
 
 jobs:
   build:
